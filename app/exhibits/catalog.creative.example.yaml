@@ -1,0 +1,35 @@
+id: creative-tools-demo
+keywords:
+  - creative
+  - tool
+  - art
+  - demo
+  - portfolio
+
+booth:
+  name: Creative Tools Demo
+  description: A compact second exhibit area for creative tools, prototypes, and making notes.
+
+companion:
+  name: Creative Guide
+  role: Introduces creative project slots and helps visitors connect prototypes with the making process.
+
+exhibits:
+  - id: visual-prototype
+    title: Visual Prototype
+    summary: A flexible creative exhibit slot for an image, UI, or interactive prototype.
+    details: Use this entry to explain what the visitor can see first, what changed during prototyping, and what part of the work is still experimental.
+    keywords:
+      - visual
+      - prototype
+      - ui
+      - image
+
+  - id: making-notes
+    title: Making Notes
+    summary: A process-focused space for inspirations, trial notes, and lessons learned.
+    details: Use this entry when the visitor asks how the work was made, what was difficult, or how the idea evolved from a rough experiment into a presentable demo.
+    keywords:
+      - process
+      - notes
+      - making

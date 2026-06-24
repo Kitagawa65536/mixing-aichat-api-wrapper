@@ -1,0 +1,66 @@
+id: local-roleplay-llm-gateway
+keywords:
+  - gateway
+  - llm
+  - openai
+  - router
+  - actor
+  - director
+  - formatter
+  - companion
+  - repository
+  - backend
+
+booth:
+  name: Local Roleplay LLM Gateway
+  description: A local OpenAI-compatible backend that turns one familiar chat endpoint into a small role-based booth companion.
+
+companion:
+  name: Gateway Guide
+  role: Helps visitors understand how this repository routes, enriches, and polishes local LLM conversations for exhibit booths.
+
+exhibits:
+  - id: openai-compatible-gateway
+    title: OpenAI-compatible Gateway
+    summary: A FastAPI service that keeps the familiar /v1/models and /v1/chat/completions surface while hiding the internal role workflow.
+    details: The gateway accepts OpenAI-style chat requests, rejects streaming for now, and forwards non-streaming requests to configured local OpenAI-compatible upstream servers. This makes existing chat UIs easier to connect to the exhibit backend.
+    keywords:
+      - fastapi
+      - api
+      - chat
+      - completions
+      - models
+
+  - id: role-workflow
+    title: Router, Actor, Director, and Formatter Roles
+    summary: Independent role clients let the system choose between short replies, deeper guidance, and optional final response polish.
+    details: The Router selects actor or director, the Actor handles ordinary booth conversation, the Director handles structured or multi-step guidance, and the Formatter can rewrite only the final assistant text while preserving the response envelope.
+    keywords:
+      - router
+      - actor
+      - director
+      - formatter
+      - workflow
+
+  - id: booth-companion-context
+    title: Booth Companion Context
+    summary: Persona text and catalog YAML become system context so the assistant can guide visitors through the displayed work.
+    details: The companion context is injected only before Actor or Director calls. Router and Formatter do not receive catalog details, keeping routing, exhibit knowledge, and final polish separate enough to explain at the booth.
+    keywords:
+      - booth
+      - companion
+      - catalog
+      - persona
+      - exhibit
+
+  - id: future-persistence-boundary
+    title: Guardrails and Persistence Boundary
+    summary: Thin storage boundaries prepare the project for lightweight logging and guardrail features without changing the OpenAI-compatible API.
+    details: The current implementation keeps the API surface small while leaving room for SQLite-backed event logging, prompt-injection guard data, memory, RAG, streaming, and UI-facing catalog APIs in later phases.
+    keywords:
+      - sqlite
+      - memory
+      - storage
+      - logging
+      - guardrail
+      - future

@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+.env.*
+*.db
+*.sqlite
+*.sqlite3
+*.log
+config.yaml
+config.*.local.yaml
+.codex-run/
+local-work/
+
+# Local manual API client collection for development checks.
+manual-test-bruno/

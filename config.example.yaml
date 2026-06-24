@@ -1,0 +1,52 @@
+router:
+  api_base: http://localhost:8080/v1
+  api_key:
+  model: router-model
+  request_timeout_seconds: 120
+
+actor:
+  api_base: http://localhost:8080/v1
+  api_key:
+  model: actor-model
+  extra_body: {}
+  request_timeout_seconds: 120
+
+formatter:
+  api_base: http://localhost:8080/v1
+  api_key:
+  model: formatter-model
+  request_timeout_seconds: 120
+
+director:
+  api_base: http://localhost:8081/v1
+  api_key:
+  model: director-model
+  extra_body: {}
+  request_timeout_seconds: 120
+
+workflow:
+  router_enabled: true
+  router_debug_logging: false
+  formatter_enabled: false
+  router_prompt_path: app/prompts/router_decision.md
+  director_prompt_path: app/prompts/director.md
+  formatter_prompt_path: app/prompts/formatter.md
+  router_max_tokens: 128
+  router_temperature: 0.0
+
+companion:
+  enabled: false
+  persona_prompt_path: app/prompts/companion.md
+  exhibit_catalog_path: app/exhibits/catalog.example.yaml
+  exhibit_catalog_paths: []
+
+injection_guard:
+  enabled: false
+  db_path: data/injection_guard.sqlite3
+  max_entries: 10000
+  min_prompt_chars: 12
+  mask_text: "[removed]"
+  fallback_messages:
+    - よくわからないのでもう一回説明してください。
+    - 少し受け取り方に迷ったので、別の言い方でもう一度教えてください。
+    - その内容では案内しづらいので、展示について聞きたいことをもう一度お願いします。

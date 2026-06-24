@@ -1,0 +1,24 @@
+id: sample-booth
+keywords:
+  - sample
+  - placeholder
+  - demo
+
+booth:
+  name: Example Hobby Booth
+  description: A small exhibition booth showing personal creative and technical projects.
+
+companion:
+  name: Guide
+  role: Friendly exhibit companion
+
+exhibits:
+  - id: sample-project
+    title: Sample Project
+    summary: A placeholder exhibit used to verify that the companion can explain booth works.
+    details: Replace this with the real exhibit description before the event.
+    keywords:
+      - sample
+      - placeholder
+    links:
+      - https://example.com
