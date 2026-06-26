@@ -3,6 +3,10 @@ keywords:
   - gateway
   - llm
   - openai
+  - llama-swap
+  - config
+  - editor
+  - gui
   - router
   - actor
   - director
@@ -13,23 +17,25 @@ keywords:
 
 booth:
   name: Local Roleplay LLM Gateway
-  description: A local OpenAI-compatible backend that turns one familiar chat endpoint into a small role-based booth companion.
+  description: A local exhibit stack centered on an OpenAI-compatible gateway plus a companion GUI for editing llama-swap model-serving settings safely.
 
 companion:
   name: Gateway Guide
-  role: Helps visitors understand how this repository routes, enriches, and polishes local LLM conversations for exhibit booths.
+  role: Helps visitors understand the gateway repository plus the related projects around it, including the model-serving setup tool, the GUI used as this product's current screen, and the paired reading-experience app.
 
 exhibits:
   - id: openai-compatible-gateway
     title: OpenAI-compatible Gateway
     summary: A FastAPI service that keeps the familiar /v1/models and /v1/chat/completions surface while hiding the internal role workflow.
-    details: The gateway accepts OpenAI-style chat requests, rejects streaming for now, and forwards non-streaming requests to configured local OpenAI-compatible upstream servers. This makes existing chat UIs easier to connect to the exhibit backend.
+    details: The gateway accepts OpenAI-style chat requests, rejects streaming for now, and forwards non-streaming requests to configured local OpenAI-compatible upstream servers. This makes existing chat UIs easier to connect to the exhibit backend while keeping the upstream model runtime replaceable.
     keywords:
       - fastapi
       - api
       - chat
       - completions
       - models
+      - backend
+      - upstream
 
   - id: role-workflow
     title: Router, Actor, Director, and Formatter Roles
@@ -52,6 +58,56 @@ exhibits:
       - catalog
       - persona
       - exhibit
+
+  - id: llama-swap-config-editor-gui
+    title: llama-swap Config Editor GUI
+    summary: A separate Flet desktop app edits llama-swap config.yaml safely so local model-serving settings can be prepared without hand-editing long YAML and command lines.
+    details: The editor loads and saves llama-swap config files, validates them against schema, creates backup files before save, preserves comments and unknown keys as much as possible with ruamel.yaml, and helps build models.<model_id>.cmd entries for llama-server, GGUF model paths, mmproj paths, context length, KV cache settings, and related launch options.
+    keywords:
+      - llama-swap
+      - config
+      - editor
+      - gui
+      - flet
+      - gguf
+      - llama-server
+      - yaml
+
+  - id: gateway-and-editor-relationship
+    title: Relationship Between the Gateway and the Config Editor
+    summary: The config editor prepares the local model-serving side, and this gateway sits in front of that runtime to provide a cleaner OpenAI-compatible interface for booth apps.
+    details: In this exhibit, the llama-swap Config Editor GUI is the human-facing setup tool for model definitions and launch commands, while mixing-aichat-api-wrapper is the request-facing orchestration layer that adds routing, companion context, and optional formatting on top of the local OpenAI-compatible server.
+    keywords:
+      - relationship
+      - setup
+      - serving
+      - orchestration
+      - local
+      - openai
+
+  - id: autobgmgenreading
+    title: AutoBgmGenReading
+    summary: A separate project for creating reading experiences with automatically prepared BGM and related media flow, shown here as another explained project alongside the gateway.
+    details: When visitors ask what this gateway is connected to or explained with, AutoBgmGenReading is one of the related projects to mention. It is not the gateway itself, but it is part of the broader set of works being introduced together in this booth context.
+    keywords:
+      - autobgmgenreading
+      - reading
+      - bgm
+      - media
+      - related-project
+
+  - id: easycharacterchatwebui
+    title: EasyCharacterChatWebUI
+    summary: A related chat-focused GUI project that is also the current screen used as this product's interface during the demo.
+    details: EasyCharacterChatWebUI is one of the explained projects around this gateway, and at the same time it is the GUI currently being used for this product in the booth flow. In practice, this screen calls the gateway, shows the character conversation UI, and connects the Kokoro avatar and TTS path on the front end.
+    keywords:
+      - easycharacterchatwebui
+      - gui
+      - frontend
+      - sillytavern
+      - kokoro
+      - tts
+      - related-project
 
   - id: future-persistence-boundary
     title: Guardrails and Persistence Boundary
