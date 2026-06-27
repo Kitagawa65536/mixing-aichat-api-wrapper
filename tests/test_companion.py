@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from app.companion import (
+    CharacterMemoryLoader,
     CompanionContextBuilder,
+    CompanionContextProvider,
     ExhibitCatalog,
     ExhibitCatalogLoader,
     KeywordCatalogSelector,
+    KeywordMemorySelector,
 )
+from app.companion.memory import CharacterMemoryCatalog
 from app.models.chat import ChatCompletionRequest, ChatMessage
 
 
@@ -56,6 +60,32 @@ def test_exhibit_catalog_loader_reads_many_yaml_files(tmp_path) -> None:
     assert [catalog.id for catalog in catalogs] == ["first", "second"]
 
 
+def test_character_memory_loader_reads_yaml(tmp_path) -> None:
+    memory_path = tmp_path / "memory.yaml"
+    memory_path.write_text(
+        """
+id: test-memories
+keywords:
+  - childhood
+memories:
+  - id: quail-egg
+    title: Quail egg memory
+    summary: Thought quail eggs were tiny chicken eggs.
+    details: Later learned quails are different birds.
+    keywords:
+      - quail egg
+""".strip(),
+        encoding="utf-8",
+    )
+
+    memory_catalog = CharacterMemoryLoader().load(str(memory_path))
+
+    assert memory_catalog.id == "test-memories"
+    assert memory_catalog.keywords == ["childhood"]
+    assert memory_catalog.memories[0].id == "quail-egg"
+    assert memory_catalog.memories[0].keywords == ["quail egg"]
+
+
 def test_companion_context_builder_combines_persona_and_catalog() -> None:
     catalog = ExhibitCatalog.model_validate(
         {
@@ -79,6 +109,32 @@ def test_companion_context_builder_combines_persona_and_catalog() -> None:
     assert "Booth: Test Booth" in context
     assert "Companion name: Guide" in context
     assert "Work One (work-1): First exhibit." in context
+
+
+def test_companion_context_builder_includes_related_memories() -> None:
+    catalog = ExhibitCatalog.model_validate({"id": "test"})
+    memory_catalog = CharacterMemoryCatalog.model_validate(
+        {
+            "memories": [
+                {
+                    "id": "quail-egg",
+                    "title": "Quail egg memory",
+                    "summary": "Thought quail eggs were tiny chicken eggs.",
+                    "details": "Later learned quails are different birds.",
+                }
+            ]
+        }
+    )
+
+    context = CompanionContextBuilder().build(
+        "Persona text.",
+        catalog,
+        memory_catalog.memories,
+    )
+
+    assert "Relevant character memories:" in context
+    assert "Quail egg memory (quail-egg)" in context
+    assert "Later learned quails are different birds." in context
 
 
 def test_keyword_catalog_selector_picks_matching_catalog() -> None:
@@ -141,3 +197,97 @@ def test_keyword_catalog_selector_prioritizes_latest_user_message() -> None:
     selected = selector.select(request, [gateway_catalog, creative_catalog])
 
     assert selected == creative_catalog
+
+
+def test_keyword_memory_selector_picks_matching_memories() -> None:
+    selector = KeywordMemorySelector()
+    memory_catalog = CharacterMemoryCatalog.model_validate(
+        {
+            "memories": [
+                {
+                    "id": "quail-egg",
+                    "title": "子供の頃のうずらの卵の勘違い",
+                    "summary": "うずらの卵は小さい鶏の卵だと思っていた。",
+                    "keywords": ["うずらの卵", "ウズラ", "ニワトリ"],
+                },
+                {
+                    "id": "rain",
+                    "title": "Rain memory",
+                    "summary": "Liked walking in the rain.",
+                    "keywords": ["rain"],
+                },
+            ]
+        }
+    )
+    request = ChatCompletionRequest(
+        model="gateway-model",
+        messages=[
+            ChatMessage(role="user", content="うずらの卵について思い出ある？"),
+        ],
+    )
+
+    selected = selector.select(request, [memory_catalog])
+
+    assert [memory.id for memory in selected] == ["quail-egg"]
+
+
+def test_keyword_memory_selector_omits_unrelated_memories() -> None:
+    selector = KeywordMemorySelector()
+    memory_catalog = CharacterMemoryCatalog.model_validate(
+        {
+            "memories": [
+                {
+                    "id": "quail-egg",
+                    "title": "子供の頃のうずらの卵の勘違い",
+                    "summary": "うずらの卵は小さい鶏の卵だと思っていた。",
+                    "keywords": ["うずらの卵", "ウズラ", "ニワトリ"],
+                }
+            ]
+        }
+    )
+    request = ChatCompletionRequest(
+        model="gateway-model",
+        messages=[ChatMessage(role="user", content="展示の構成を教えて")],
+    )
+
+    selected = selector.select(request, [memory_catalog])
+
+    assert selected == []
+
+
+def test_companion_context_provider_adds_matching_memory_to_context() -> None:
+    provider = CompanionContextProvider(
+        "Persona text.",
+        [ExhibitCatalog.model_validate({"id": "test"})],
+        [
+            CharacterMemoryCatalog.model_validate(
+                {
+                    "memories": [
+                        {
+                            "id": "quail-egg",
+                            "title": "子供の頃のうずらの卵の勘違い",
+                            "summary": (
+                                "子供の時、うずらの卵はニワトリが時々すごく"
+                                "小さい卵を生むのだと思っていた。"
+                            ),
+                            "details": (
+                                "ウズラという鳥がいると知った時に、鶏の卵とは"
+                                "別物なのだと初めて知った。"
+                            ),
+                            "keywords": ["うずらの卵", "ウズラ", "ニワトリ"],
+                        }
+                    ]
+                }
+            )
+        ],
+    )
+    request = ChatCompletionRequest(
+        model="gateway-model",
+        messages=[ChatMessage(role="user", content="うずらの卵の話を覚えてる？")],
+    )
+
+    context = provider.build_for_request(request)
+
+    assert "Persona text." in context
+    assert "Relevant character memories:" in context
+    assert "子供の時、うずらの卵はニワトリ" in context

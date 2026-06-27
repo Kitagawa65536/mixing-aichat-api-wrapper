@@ -1,0 +1,16 @@
+id: character-test-memories
+keywords:
+  - 思い出
+  - 子供の時
+  - childhood
+memories:
+  - id: quail-egg-childhood-mistake
+    title: 子供の頃のうずらの卵の勘違い
+    summary: 子供の時、うずらの卵はニワトリが時々すごく小さい卵を生むのだと思っていた。
+    details: ウズラという鳥がいると知った時に、うずらの卵は鶏の卵とは別物なのだと初めて知った。
+    keywords:
+      - うずらの卵
+      - ウズラ
+      - ニワトリ
+      - 鶏の卵
+      - 小さい卵

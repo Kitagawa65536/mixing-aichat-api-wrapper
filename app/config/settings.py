@@ -18,6 +18,7 @@ DEFAULT_DIRECTOR_PROMPT_PATH = "app/prompts/director.md"
 DEFAULT_FORMATTER_PROMPT_PATH = "app/prompts/formatter.md"
 DEFAULT_COMPANION_PROMPT_PATH = "app/prompts/companion.md"
 DEFAULT_EXHIBIT_CATALOG_PATH = "app/exhibits/catalog.example.yaml"
+DEFAULT_CHARACTER_MEMORY_PATHS: list[str] = []
 DEFAULT_INJECTION_GUARD_DB_PATH = "data/injection_guard.sqlite3"
 DEFAULT_INJECTION_GUARD_MAX_ENTRIES = 10000
 DEFAULT_INJECTION_GUARD_MIN_PROMPT_CHARS = 12
@@ -59,6 +60,7 @@ class CompanionConfig(BaseModel):
     persona_prompt_path: str = DEFAULT_COMPANION_PROMPT_PATH
     exhibit_catalog_path: str = DEFAULT_EXHIBIT_CATALOG_PATH
     exhibit_catalog_paths: list[str] = Field(default_factory=list)
+    character_memory_paths: list[str] = Field(default_factory=list)
 
     def effective_exhibit_catalog_paths(self) -> list[str]:
         if self.exhibit_catalog_paths:

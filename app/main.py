@@ -6,7 +6,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.chat import router as chat_router
-from app.companion import CompanionContextProvider, ExhibitCatalogLoader
+from app.companion import (
+    CharacterMemoryLoader,
+    CompanionContextProvider,
+    ExhibitCatalogLoader,
+)
 from app.api.models import router as models_router
 from app.config.settings import AppConfig, load_config
 from app.llm.roles import ActorClient, DirectorClient, FormatterClient, RouterClient
@@ -56,9 +60,13 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         exhibit_catalogs = ExhibitCatalogLoader().load_many(
             app_config.companion.effective_exhibit_catalog_paths()
         )
+        memory_catalogs = CharacterMemoryLoader().load_many(
+            app_config.companion.character_memory_paths
+        )
         app.state.companion_context_provider = CompanionContextProvider(
             persona_prompt,
             exhibit_catalogs,
+            memory_catalogs,
         )
     app.state.event_sink = NoopConversationEventSink()
     app.state.injection_prompt_store = None

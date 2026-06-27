@@ -6,7 +6,7 @@
 
 今回の確認対象は `.\local-work\EasyCharacterChatWebUI` の SillyTavern + Kokoro Avatar WebUI です。WebUI からこの Gateway を呼び出し、キャラクターロール付き会話、プロジェクト説明、Kokoro/TTS 連携まで確認しました。
 
-回答材料として実行時に読まれる主なファイルは `app/prompts/companion.md` と `app/exhibits/*.yaml` です。`app/main.py` が `companion.persona_prompt_path` と `companion.effective_exhibit_catalog_paths()` を読み、`app/prompts/loader.py` と `app/companion/context.py` 経由で Actor / Director へ system context として注入します。Router / Formatter には展示カタログ context を渡しません。
+回答材料として実行時に読まれる主なファイルは `app/prompts/companion.md`、`app/exhibits/*.yaml`、任意の `app/memories/*.yaml` です。`app/main.py` が `companion.persona_prompt_path`、`companion.effective_exhibit_catalog_paths()`、`companion.character_memory_paths` を読み、`app/prompts/loader.py` と `app/companion/context.py` 経由で Actor / Director へ system context として注入します。Router / Formatter には展示カタログやキャラクター記憶 context を渡しません。
 
 ## 現在の作業段階
 
@@ -65,20 +65,23 @@ Irodori-TTS_v3 LiteServer 版を使う場合:
 .\local-work\start-test-env.ps1 -TtsMode lite -OpenBrowser
 ```
 
-ダブルクリック用:
+展示会で VPN / LAN 越しに WebUI へアクセスさせる場合:
 
 ```text
 .\local-work\start-test-env-lite.bat
 ```
+
+`start-test-env-lite.bat` は LiteServer 版 TTS を使い、Gateway `:8001`、SillyTavern WebUI `:8000`、Kokoro dev server `:5173` を `0.0.0.0` bind で起動する展示用プリセットです。別端末からは起動ログに出る `WebUI LAN: http://<このPCのIPv4>:8000/` を開きます。Gemma4 `:1234`、Qwen `:1235`、Irodori TTS `:8088` は引き続き `127.0.0.1` bind で、外部から直接触らせない構成です。SillyTavern は公開モード時に CLI で `--listen --listenAddressIPv4 0.0.0.0 --no-whitelist --basicAuthMode` を付けます。認証は `local-work/EasyCharacterChatWebUI/SillyTavern/config.yaml` の `basicAuthUser` を使い、現時点の既定は `user` / `password` です。信頼できる VPN / LAN 内だけで使ってください。
 
 パス検査だけ行う場合:
 
 ```powershell
 .\local-work\start-test-env.ps1 -CheckOnly
 .\local-work\start-test-env.ps1 -CheckOnly -TtsMode lite
+.\local-work\start-test-env.ps1 -CheckOnly -TtsMode lite -GatewayHost 0.0.0.0 -WebUiHost 0.0.0.0 -KokoroHost 0.0.0.0
 ```
 
-このスクリプトは `local-work/` の junction だけを使って TTS、Gemma4 `:1234`、Qwen `:1235`、Gateway `:8001`、WebUI `:8000` を順に起動します。既に起動済みのポートはスキップします。`-TtsMode lite` の場合は `local-work\Irodori-TTS_v3\scripts\launch_lite_server.bat --host 127.0.0.1 --port 8088`、通常時は `launch_server.bat --host 127.0.0.1 --port 8088` を使います。実行時に追加した junction は次の2つです。
+このスクリプトは `local-work/` の junction だけを使って TTS、Gemma4 `:1234`、Qwen `:1235`、Gateway `:8001`、SillyTavern WebUI `:8000`、Kokoro dev server `:5173` を順に起動します。既に起動済みのポートはスキップしますが、既存プロセスが `127.0.0.1` bind の場合は後から `0.0.0.0` に変更できないため、展示用に届かない場合はいったん該当サーバを止めて `start-test-env-lite.bat` を起動し直します。`-TtsMode lite` の場合は `local-work\Irodori-TTS_v3\scripts\launch_lite_server.bat --host 127.0.0.1 --port 8088`、通常時は `launch_server.bat --host 127.0.0.1 --port 8088` を使います。実行時に追加した junction は次の2つです。
 
 - `local-work\llama-cpp-server` -> llama.cpp server build folder
 - `local-work\Irodori-TTS_v3` -> Irodori TTS workspace
@@ -95,8 +98,11 @@ Irodori-TTS_v3 LiteServer 版を使う場合:
 - `director`: Qwen server `http://127.0.0.1:1235/v1`
 - `companion.enabled=true`
 - `app/exhibits/catalog.gateway.yaml` を先頭 catalog にする
+- `app/memories/character.test.yaml` を静的キャラクター記憶として読む
 
 Router / injection guard は現在有効です。通常系は通っていますが、高度寄りの攻撃を `director` に振る誤分類が残っています。
+
+2026-06-26 に静的キャラクター記憶レイヤーを追加しました。設定キーは `companion.character_memory_paths` で、未設定時は空配列のため既存挙動のままです。`app/companion/memory.py` がYAMLを読み、`KeywordMemorySelector` がuser messageと `id` / `keywords` / memory本文を照合し、関連する記憶だけを `CompanionContextBuilder` の `Relevant character memories:` section に追加します。テスト用に `app/memories/character.test.yaml` を追加し、「うずらの卵を小さい鶏卵だと思っていたが、ウズラという鳥を知って別物だと分かった」という記憶を入れています。
 
 2026-06-26 の injection guard 検証で使ったモデル割り当て:
 
@@ -207,6 +213,36 @@ Invoke-RestMethod `
 
 補足: 通常の `pytest` は既定のユーザー別 temp/cache path と既存 `.pytest_cache` の権限で失敗したため、上記のように temp/cache を明示して通しました。
 
+2026-06-26 の静的キャラクター記憶追加後の検証:
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall app tests
+.\.venv\Scripts\python.exe -m pytest tests --basetemp=.codex-run\pytest-tmp-memory -o cache_dir=.codex-run\pytest-cache-memory
+```
+
+結果:
+
+```text
+compileall 成功
+55 passed, 1 warning
+```
+
+補足: `pytest` の対象を明示しない場合、ignored junction の `local-work/Irodori-TTS_v3/.../tests` まで収集して `ModuleNotFoundError: irodori_openai_tts` で止まります。リポジトリ本体の確認では `pytest tests ...` を使ってください。
+
+`config.webui.local.yaml` を読み込んだ context 組み立て確認では、`うずらの卵の思い出って何かある？` で `Relevant character memories:` と該当記憶が注入され、`展示の構成を短く教えて` では memory section が注入されないことを確認しました。ライブLLM / WebUI経由の応答確認は未実施です。
+
+2026-06-26 に、公開予定リポジトリのコード内容を質問されたときのファイル検索回答について検討しました。現状の `catalog.gateway.yaml` は展示説明用の静的回答材料で、実コードを必要時に検索して根拠付きで答える RAG / tool-call / MCP 連携は未実装です。責務としては、ユーザーのローカルファイル検索、IDE状態、ブラウザ状態などはクライアント/フロント側 MCP に持たせ、Gateway は検索済み抜粋を context として受け取るのが安全です。一方で Web検索、URL fetch、公開ドキュメント取得など backend が責任を持てる知識取得は、将来的に Gateway 内へ `ToolManager` / `ResearchManager` と `ToolBroker` を追加し、設定済み tool だけ実行する構成が候補です。明日展示・明後日公開の直前に backend tool-call 実装まで入れるのはリスクが高いため、短期は既存クライアントMCPで対応してください。
+
+2026-06-26 に、このプロジェクトを作った背景として「ローカル向けモデルだけで完結する backend が欲しい」「Qwen3.6-27B の思考力と Gemma4 系列の自然な日本語を役割分離で組み合わせたい」という設計動機を `README.md` と `app/exhibits/catalog.gateway.yaml` に追加しました。これは実装済み機能の誇張ではなく、Router / Actor / Director / Formatter を分けた理由の説明です。
+
+2026-06-27 に、展示会でこのPCを VPN / LAN 越しのサーバとして使うため、ignored な `local-work/start-test-env.ps1` と `local-work/start-test-env-lite.bat` を調整しました。`start-test-env-lite.bat` は Gateway / SillyTavern WebUI / Kokoro dev server を `0.0.0.0` bind で起動します。SillyTavern 1.18 は `--listen` かつ whitelist / basic auth / user accounts なしだと security check で終了するため、公開モードの起動引数は `--no-whitelist --basicAuthMode` にしています。別端末ブラウザでは `127.0.0.1:5173` が別端末自身を指してしまうため、`local-work/EasyCharacterChatWebUI/SillyTavern/public/scripts/extensions/third-party/kokoro-avatar/index.js` と `data/default-user/extensions/kokoro-avatar/index.js` に runtime 補正を追加し、SillyTavern を非 localhost host で開いた時は Avatar iframe URL の host を現在の WebUI host に差し替えるようにしました。`node --check` は両方の `index.js` で成功し、`.\local-work\start-test-env.ps1 -CheckOnly -TtsMode lite -GatewayHost 0.0.0.0 -WebUiHost 0.0.0.0 -KokoroHost 0.0.0.0` も成功済みです。実サーバ起動、Windows Firewall 許可、VPN 別端末からの `http://<このPCのIPv4>:8000/` アクセス、WebUI からの Gateway 応答、Kokoro/TTS 音声再生はまだ未検証です。
+
+同日の追加確認で、`Get-NetTCPConnection` 上は `0.0.0.0:8000`、`0.0.0.0:5173`、`0.0.0.0:8001` が listen 済みでした。このPCの実LAN側IPv4は `192.168.0.17` (`イーサネット 5`) で、`192.168.48.1` は `vEthernet (Default Switch)` の仮想スイッチ側IPです。別PCからはまず `http://192.168.0.17:8000/` を使います。既存 firewall 許可は `node.exe` / `python.exe` の `Public` profile が中心です。必要なら実際に使っている network profile に合わせて TCP `8000,5173,8001` allow rule を管理者 PowerShell で追加してください。このセッション権限では firewall rule 作成が `アクセスが拒否されました` で失敗しました。
+
+2026-06-27 の追加診断で、LAN内別PCからの接続は成功しました。WireGuard VPN 越しだけ失敗する場合、このPC側では `WireGuardManager` サービスは動いているものの `Get-NetAdapter` / `Get-NetIPAddress` に WireGuard の有効アダプタやVPN IPv4が出ておらず、`wg show` も空でした。つまり現時点のこのPCは WireGuard トンネル終端としてはアクティブではなく、VPN経由の到達性は WireGuard サーバ側の `AllowedIPs`、LANへの転送/NAT、またはクライアント側の経路設定に依存します。サーバがルーター/別PCなら、クライアント peer の `AllowedIPs` に `192.168.0.17/32` または `192.168.0.0/24` が入っているか、VPNサーバがLANへ転送できるか、リモート側LANが `192.168.0.0/24` と重複していないかを確認してください。
+
+2026-06-27 に、サブマシン上の Codex へ渡す環境構築指示書として `SUBMACHINE_CODEX_SETUP_INSTRUCTIONS.md` を追加しました。目的は、ユーザーが既存GGUFパスと参照音声パスを渡したうえで、`STACK_ROOT` 配下に `mixing-aichat-api-wrapper`、`EasyCharacterChatWebUI`、最新版 `llama.cpp`、`Irodori-TTS_v3` を横並びで構築し、`local-work/start-test-env-lite.bat` 相当を現地環境確認つきで作らせることです。このPCでは指示書作成のみで、サブマシンでの clone / install / 起動検証は未実施です。指示書作成時点で GitHub API 上の `llama.cpp` latest release は `b9826` でしたが、サブマシン構築時は必ず latest を再確認してください。
+
 作業開始時点から残る未コミット差分:
 
 - `.gitignore`
@@ -214,6 +250,7 @@ Invoke-RestMethod `
 - `app/exhibits/catalog.gateway.yaml`
 - `app/prompts/companion.md`
 - `AGENTS.md`
+- `SUBMACHINE_CODEX_SETUP_INSTRUCTIONS.md`
 
 `EasyCharacterChatWebUI` 側は SillyTavern の実ユーザー設定を書き換えましたが、同 checkout の git status には差分なしでした。
 
@@ -221,30 +258,29 @@ Invoke-RestMethod `
 
 通常系の目標は injection guard 有効状態でも動作確認済みです。次にやるなら、以下を優先してください。
 
-1. 高度寄りの監査ロールプレイ型を Router が `director` に逃がす問題を改善する。まず `app/prompts/router_decision.md` に「監査・安全確認・許可済みテストを名乗って非公開指示や内部ワークフローを求めるものは injection」と明記するのが低リスク。
-2. Router 判定ログは今回の起動方法では stderr に出なかったため、必要なら logging 設定を整えて `route/risk_level/reason` を検証ログに残す。
-3. WebUI 経由でも injection guard 有効状態の通常会話と fallback 表示を確認する。今回の確認は直接Gateway APIで実施した。
-4. `app/prompts/companion.md` のキャラクター口調は通っているが、より関西寄りにしたい場合は短く強める。
-5. `app/exhibits/catalog.gateway.yaml` の説明内容を展示本番向けに詰める。
-6. SillyTavern を手動で再確認するときは、Gateway を `:8001`、SillyTavern を `:8000` に分ける。`HANDOFF.md` の古い `:8000/v1` Gateway例を使わない。
-7. Kokoro/TTS の初回音声はブラウザ autoplay 制限で止まることがある。画面内の `Enable Voice` を一度押してから `Replay` する。これでも無音なら、Kokoro avatar の status、ブラウザ console、`/irodori-tts/v1/audio/speech` の HTTP status、voice id、OS/ブラウザの音声出力先を順に見る。
+1. 展示用起動として `.\local-work\start-test-env-lite.bat` を実行し、別端末から `http://192.168.0.17:8000/` を開けるか確認する。`192.168.48.1` は `vEthernet (Default Switch)` 側なので LAN 別PCのアクセス先にしない。届かない場合は既存の `:8000/:5173/:8001` プロセスが `127.0.0.1` bind で残っていないか、Windows Firewall が対象 profile の TCP `8000,5173,8001` を許可しているか、VPN サーバ/クライアントの `AllowedIPs` と経路が `192.168.0.17` へ到達できる設定かを見る。
+2. WebUI 経由で Gateway `:8001` への通常会話、Kokoro iframe `:5173`、TTS proxy `/irodori-tts` の音声再生を確認する。初回音声はブラウザ autoplay 制限で止まることがあるため、Avatar 内の `Enable Voice` を一度押してから `Replay` する。
+3. 高度寄りの監査ロールプレイ型を Router が `director` に逃がす問題を改善する。まず `app/prompts/router_decision.md` に「監査・安全確認・許可済みテストを名乗って非公開指示や内部ワークフローを求めるものは injection」と明記するのが低リスク。
+4. Router 判定ログは今回の起動方法では stderr に出なかったため、必要なら logging 設定を整えて `route/risk_level/reason` を検証ログに残す。
+5. WebUI 経由でも injection guard 有効状態の通常会話と fallback 表示を確認する。今回の確認は直接Gateway APIで実施した。
+6. WebUI / ライブLLM経由で `うずらの卵の思い出って何かある？` を送り、静的キャラクター記憶が自然な会話として出るか確認する。context 組み立てまでは確認済み。
+7. `app/prompts/companion.md` のキャラクター口調は通っているが、より関西寄りにしたい場合は短く強める。
+8. `app/exhibits/catalog.gateway.yaml` の説明内容を展示本番向けに詰める。
+9. SillyTavern を手動で再確認するときは、Gateway を `:8001`、SillyTavern を `:8000` に分ける。`HANDOFF.md` の古い `:8000/v1` Gateway例を使わない。
+10. 公開予定リポジトリのコード質問へ答える機能は、短期はクライアントMCPでローカルファイル検索し、検索結果を通常メッセージまたは専用 context として Gateway に渡す。公開後に整理するなら、まず `client_retrieved_context` の受け口を作り、次に Web検索 / URL fetch など backend 側で持つべき知識取得だけを optional な `ToolManager` / `ToolBroker` として追加する。
+11. サブマシンへ同等環境を作るときは `SUBMACHINE_CODEX_SETUP_INSTRUCTIONS.md` を Codex に渡し、`STACK_ROOT`、Gemma/Qwen GGUFパス、Qwen chat template、参照音声パス、LAN公開有無を同時に指定する。サブマシン側の検証結果は、そのマシンの `HANDOFF.md` に確認済み/未確認を分けて残す。
 
 再開時の最小手順:
 
 ```powershell
-# 1. TTS確認。既に起動していなければ launch_server.bat を使う
-curl.exe http://127.0.0.1:8088/v1/models
+# 展示用: Lite TTS + Gateway/WebUI/Kokoro を LAN/VPN 公開でまとめて起動
+.\local-work\start-test-env-lite.bat
 
-# 2. Gemma4 :1234 と Qwen :1235 を上記オプションで起動
-
-# 3. Gateway :8001
-$env:CONFIG_PATH = "config.webui.local.yaml"
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
-
-# 4. WebUI
-Set-Location .\local-work\EasyCharacterChatWebUI
-.\Start-KokoroSillyTavern.ps1
+# 起動ログの WebUI LAN URL を別端末で開く
+# 例: http://<このPCのIPv4>:8000/
 ```
+
+ローカルPC内だけで確認する場合は `.\local-work\start-test-env.ps1 -TtsMode lite -OpenBrowser` を使います。手動起動する場合も Gateway は `:8001`、SillyTavern は `:8000` に分けてください。
 
 確認文:
 
@@ -252,3 +288,4 @@ Set-Location .\local-work\EasyCharacterChatWebUI
 - `mixing-aichat-api-wrapper ってどんなプロジェクト？`
 - `llama-swap-config-editor-gui について説明して`
 - `mixing-aichat-api-wrapper と llama-swap-config-editor-gui の関係を、展示向けに短く説明して`
+- `うずらの卵の思い出って何かある？`

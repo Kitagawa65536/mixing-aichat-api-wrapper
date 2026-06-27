@@ -47,6 +47,8 @@ companion:
   exhibit_catalog_paths:
     - app/exhibits/catalog.gateway.yaml
     - app/exhibits/catalog.creative.example.yaml
+  character_memory_paths:
+    - app/memories/character.test.yaml
 
 injection_guard:
   enabled: true

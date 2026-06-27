@@ -14,20 +14,25 @@ keywords:
   - companion
   - repository
   - backend
+  - qwen
+  - gemma
+  - mcp
+  - toolcall
+  - search
 
 booth:
   name: Local Roleplay LLM Gateway
-  description: A local exhibit stack centered on an OpenAI-compatible gateway plus a companion GUI for editing llama-swap model-serving settings safely.
+  description: A local exhibit stack centered on an OpenAI-compatible chat gateway, role-based backend orchestration, and a companion-facing GUI for local model and demo workflows.
 
 companion:
   name: Gateway Guide
-  role: Helps visitors understand the gateway repository plus the related projects around it, including the model-serving setup tool, the GUI used as this product's current screen, and the paired reading-experience app.
+  role: Helps visitors understand the gateway repository, the role workflow inside it, the client-side GUI/MCP responsibilities around it, and future backend-owned tool calls for public knowledge retrieval.
 
 exhibits:
   - id: openai-compatible-gateway
     title: OpenAI-compatible Gateway
-    summary: A FastAPI service that keeps the familiar /v1/models and /v1/chat/completions surface while hiding the internal role workflow.
-    details: The gateway accepts OpenAI-style chat requests, rejects streaming for now, and forwards non-streaming requests to configured local OpenAI-compatible upstream servers. This makes existing chat UIs easier to connect to the exhibit backend while keeping the upstream model runtime replaceable.
+    summary: A FastAPI service that keeps the familiar /v1/models and /v1/chat/completions surface while hiding a local role workflow behind it.
+    details: The gateway accepts OpenAI-style chat requests, rejects streaming for now, and forwards non-streaming requests to configured local OpenAI-compatible upstream servers. Its public surface stays small so existing chat UIs can connect easily, while the backend can still split routing, character context, guardrails, and final wording into separate internal responsibilities.
     keywords:
       - fastapi
       - api
@@ -37,27 +42,43 @@ exhibits:
       - backend
       - upstream
 
+  - id: model-composition-motivation
+    title: Why Split Model Roles
+    summary: The project grew from wanting a fully local backend that can combine stronger reasoning with more natural Japanese dialogue.
+    details: The design is based on the author's practical impression that Qwen3.6-27B is strong at reasoning, planning, and structured judgment, but can sound a little unnatural in Japanese conversation, while Gemma4 models can write natural Japanese even at smaller sizes such as E2B, but may struggle with fine-grained reasoning. By separating Director, Actor, Router, and Formatter roles, the gateway can experiment with using Qwen-like reasoning to guide structure while letting Gemma4-like models produce the user-facing conversational tone.
+    keywords:
+      - qwen
+      - qwen3.6
+      - gemma
+      - gemma4
+      - japanese
+      - reasoning
+      - local-model
+      - motivation
+
   - id: role-workflow
     title: Router, Actor, Director, and Formatter Roles
     summary: Independent role clients let the system choose between short replies, deeper guidance, and optional final response polish.
-    details: The Router selects actor or director, the Actor handles ordinary booth conversation, the Director handles structured or multi-step guidance, and the Formatter can rewrite only the final assistant text while preserving the response envelope.
+    details: The Router selects actor, director, or an injection fallback path. The Actor handles ordinary booth conversation, the Director handles structured or multi-step guidance, and the Formatter can rewrite only the final assistant text while preserving the response envelope. These roles can use the same upstream model or different upstream models, but they keep separate prompts and request settings.
     keywords:
       - router
       - actor
       - director
       - formatter
       - workflow
+      - injection
 
   - id: booth-companion-context
     title: Booth Companion Context
-    summary: Persona text and catalog YAML become system context so the assistant can guide visitors through the displayed work.
-    details: The companion context is injected only before Actor or Director calls. Router and Formatter do not receive catalog details, keeping routing, exhibit knowledge, and final polish separate enough to explain at the booth.
+    summary: Persona text, exhibit catalog YAML, and optional character memories become system context for the answer-producing roles.
+    details: The companion context is injected only before Actor or Director calls. Router and Formatter do not receive catalog details or character memories, keeping routing, exhibit knowledge, memory, and final polish separate enough to explain at the booth. Multiple exhibit catalogs can be configured, and a lightweight keyword selector chooses the most relevant catalog for the current user message.
     keywords:
       - booth
       - companion
       - catalog
       - persona
       - exhibit
+      - memory
 
   - id: llama-swap-config-editor-gui
     title: llama-swap Config Editor GUI
@@ -85,6 +106,32 @@ exhibits:
       - local
       - openai
 
+  - id: client-mcp-boundary
+    title: Client MCP and Local Responsibility Boundary
+    summary: Local files and user-owned tools belong on the client side, while the gateway treats their results as provided context.
+    details: Even though the current demo can be arranged as a monorepo, the architectural boundary is that user-local file search, IDE state, browser state, and private workspace tools should live in the client or frontend side, for example through an existing client MCP integration. When the frontend searches local files, it can pass concise excerpts into the chat request, and the gateway should answer from that provided context without needing direct access to the user's filesystem.
+    keywords:
+      - mcp
+      - frontend
+      - client
+      - local-files
+      - context
+      - responsibility
+
+  - id: backend-toolcall-roadmap
+    title: Backend Toolcall Roadmap
+    summary: Future backend-owned tools should focus on public or server-owned knowledge such as Web search, URL fetch, and controlled knowledge retrieval.
+    details: A future ToolManager or ResearchManager role could decide whether backend-owned retrieval is needed, while a ToolBroker executes only configured tools such as Web search, URL fetch, or server-side knowledge lookup. Actor and Director would not directly control arbitrary tools; they would receive curated retrieved context and cite it when answering. This keeps local/private client tools separate from public backend knowledge that the server is responsible for fetching.
+    keywords:
+      - toolcall
+      - tool-manager
+      - research-manager
+      - tool-broker
+      - web-search
+      - fetch
+      - backend
+      - future
+
   - id: autobgmgenreading
     title: AutoBgmGenReading
     summary: A separate project for creating reading experiences with automatically prepared BGM and related media flow, shown here as another explained project alongside the gateway.
@@ -110,13 +157,14 @@ exhibits:
       - related-project
 
   - id: future-persistence-boundary
-    title: Guardrails and Persistence Boundary
-    summary: Thin storage boundaries prepare the project for lightweight logging and guardrail features without changing the OpenAI-compatible API.
-    details: The current implementation keeps the API surface small while leaving room for SQLite-backed event logging, prompt-injection guard data, memory, RAG, streaming, and UI-facing catalog APIs in later phases.
+    title: Guardrails, Persistence, and Retrieval Boundary
+    summary: Thin storage and retrieval boundaries prepare the project for logging, guardrails, memory, and controlled knowledge lookup without changing the OpenAI-compatible API.
+    details: The current implementation keeps the API surface small while leaving room for SQLite-backed event logging, prompt-injection guard data, character memory, client-provided context, backend-owned retrieval, streaming, and UI-facing catalog APIs in later phases. The near-term safe path is to use client MCP for local file search during demos, then add backend ToolManager and ToolBroker pieces later for public knowledge that the server should fetch.
     keywords:
       - sqlite
       - memory
       - storage
       - logging
       - guardrail
+      - retrieval
       - future

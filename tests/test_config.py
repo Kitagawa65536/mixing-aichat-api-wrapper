@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.config.settings import (
+    DEFAULT_CHARACTER_MEMORY_PATHS,
     DEFAULT_COMPANION_PROMPT_PATH,
     DEFAULT_EXHIBIT_CATALOG_PATH,
     DEFAULT_INJECTION_GUARD_DB_PATH,
@@ -52,6 +53,7 @@ def test_endpoint_config_normalizes_api_base_and_defaults_timeout() -> None:
     assert config.companion.effective_exhibit_catalog_paths() == [
         DEFAULT_EXHIBIT_CATALOG_PATH
     ]
+    assert config.companion.character_memory_paths == DEFAULT_CHARACTER_MEMORY_PATHS
     assert config.injection_guard.enabled is False
     assert config.injection_guard.db_path == DEFAULT_INJECTION_GUARD_DB_PATH
     assert config.injection_guard.max_entries == DEFAULT_INJECTION_GUARD_MAX_ENTRIES
@@ -96,6 +98,9 @@ def test_endpoint_config_accepts_extra_body_companion_and_injection_guard_config
                     "app/exhibits/catalog.gateway.yaml",
                     "app/exhibits/catalog.creative.example.yaml",
                 ],
+                "character_memory_paths": [
+                    "app/memories/character.test.yaml",
+                ],
             },
             "injection_guard": {
                 "enabled": True,
@@ -118,6 +123,9 @@ def test_endpoint_config_accepts_extra_body_companion_and_injection_guard_config
     assert config.companion.effective_exhibit_catalog_paths() == [
         "app/exhibits/catalog.gateway.yaml",
         "app/exhibits/catalog.creative.example.yaml",
+    ]
+    assert config.companion.character_memory_paths == [
+        "app/memories/character.test.yaml"
     ]
     assert config.injection_guard.enabled is True
     assert config.injection_guard.db_path == "tmp/injection.sqlite3"

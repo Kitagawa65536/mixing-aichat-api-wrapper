@@ -39,6 +39,7 @@ companion:
   persona_prompt_path: app/prompts/companion.md
   exhibit_catalog_path: app/exhibits/catalog.example.yaml
   exhibit_catalog_paths: []
+  character_memory_paths: []
 
 injection_guard:
   enabled: false
